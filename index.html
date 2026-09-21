@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onion Growth Simulator: soil pH and iron</title>
+<meta name="description" content="Simulate how soil pH and iron (Fe) affect onion chlorophyll, leaves and bulb growth. Built for onion growers in Bongabon, Nueva Ecija.">
+<style>
+:root{
+  --field-900:#143620;
+  --field-800:#1f4a2b;
+  --field-700:#2c6a3b;
+  --leaf-500:#4a9a3f;
+  --sprout-200:#cfe5a8;
+  --meadow-100:#e3ecd0;
+  --meadow-50:#eef3e1;
+  --paper:#fbfcf5;
+  --line:#c9d4b4;
+  --ink:#1c2818;
+  --ink-soft:#4a5a42;
+  --soil-700:#5a4029;
+  --amber:#e3a21a;
+  --onion:#8f2c5c;
+  --bad:#b3432e;
+  --good:#3f8a3a;
+  --warn:#c98a12;
+  --head-font:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --body-font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;color:var(--ink);font-family:var(--body-font);font-size:15px;line-height:1.5;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 46px,rgba(31,74,43,.04) 46px 48px),
+    var(--meadow-50);
+}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+/* Header */
+.top{background:var(--field-800);color:#f2f7e6;padding:16px 20px}
+.brand{max-width:1180px;margin:0 auto;display:flex;gap:14px;align-items:center}
+.brand h1{margin:0;font-family:var(--head-font);font-size:clamp(22px,3.4vw,30px);font-weight:700;letter-spacing:.2px;line-height:1.15}
+.brand p{margin:3px 0 0;color:#cfe0b8;font-size:14px;max-width:62ch}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:minmax(320px,410px) minmax(0,1fr);gap:20px;max-width:1180px;margin:0 auto;padding:20px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px}
+.controls{padding:16px 18px 18px}
+.viz{align-self:start;position:sticky;top:12px;padding:12px 14px 14px}
+
+.group{padding:12px 0;border-bottom:1px solid var(--meadow-100)}
+.group:first-child{padding-top:2px}
+.group:last-child{border-bottom:0}
+.lbl,.row label{font-weight:650;font-size:14px}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:2px}
+.row output{font-weight:650;color:var(--field-700);font-variant-numeric:tabular-nums;text-align:right}
+.note{margin:8px 0 0;font-size:13px;color:var(--ink-soft)}
+
+/* Segmented toggle */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;background:var(--meadow-100);padding:4px;border-radius:11px}
+.seg button{border:0;background:transparent;padding:10px 8px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--ink-soft);min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--field-800);color:#fff}
+
+/* Sliders */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:6px;background:var(--track,#cdd8bd)}
+input[type=range]::-moz-range-track{height:10px;border-radius:6px;background:var(--track,#cdd8bd)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;box-sizing:border-box;width:26px;height:26px;margin-top:-8px;border-radius:50%;background:#fff;border:4px solid var(--field-800);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-thumb{box-sizing:border-box;width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--field-800);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+input[type=range]:focus-visible::-webkit-slider-thumb{outline:3px solid var(--amber)}
+input[type=range]:focus-visible::-moz-range-thumb{outline:3px solid var(--amber)}
+input[type=range]:focus-visible{outline:none}
+#ph{--track:linear-gradient(90deg,#c0392b 0%,#e2712a 22%,#e9c03a 38%,#4fa84a 50%,#2f8f9d 68%,#3f5fb0 84%,#6c3a9a 100%)}
+#fe{--track:linear-gradient(90deg,#efe6cf 0%,#d9a66a 50%,#a9482a 100%)}
+#speed{--track:linear-gradient(90deg,#cfe5a8,#4a9a3f)}
+.ticks{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);margin-top:0}
+
+select{width:100%;margin-top:6px;padding:10px 12px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.badge{display:inline-block;background:var(--field-800);color:#fff;border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums}
+
+/* Scenario chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;min-height:36px}
+.chip:hover{border-color:var(--field-700);background:var(--meadow-50)}
+
+/* Info rows */
+.info{margin:0;display:grid;gap:6px}
+.info>div{display:flex;justify-content:space-between;gap:12px;align-items:baseline;background:var(--meadow-50);border-radius:9px;padding:7px 10px}
+.info dt{font-size:13px;color:var(--ink-soft);flex:0 0 auto}
+.info dd{margin:0;font-weight:600;text-align:right;font-size:13.5px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline;background:var(--good)}
+.dot.warn{background:var(--warn)}
+.dot.bad{background:var(--bad)}
+
+/* Buttons */
+.btnrow{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;min-height:48px;padding:8px 14px;font-weight:650;cursor:pointer}
+.btn:hover{background:var(--meadow-50)}
+.btn.primary{background:var(--field-800);border-color:var(--field-800);color:#fff;font-size:16px}
+.btn.primary:hover{background:var(--field-700)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.stepper{display:grid;grid-template-columns:52px 1fr 52px;gap:8px;align-items:center;margin-top:10px}
+.stepper .btn{padding:0;font-size:22px;line-height:1}
+#dayDisp{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;background:var(--meadow-50);border-radius:10px;padding:11px 6px}
+
+/* Report */
+.report{margin-top:6px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff;padding:4px 12px 10px;font-size:13.5px}
+.report h4{margin:12px 0 4px;font-family:var(--head-font);font-size:15px;color:var(--field-800);border-bottom:1px solid var(--meadow-100);padding-bottom:3px}
+.report dl{margin:0}
+.report .r{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+.report dt{color:var(--ink-soft);flex:0 0 42%}
+.report dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.report p{margin:5px 0;color:var(--ink)}
+.report .harvest{background:var(--meadow-50);border-left:4px solid var(--field-700);border-radius:6px;padding:6px 10px;margin-top:10px}
+.report .harvest h4{border:0;margin-top:2px}
+
+/* Visualization */
+.viz-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.viz-head .title{font-family:var(--head-font);font-weight:700;font-size:17px}
+.live{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:650;color:var(--ink-soft)}
+.live i{width:11px;height:11px;border-radius:50%;background:var(--amber)}
+.live.on i{background:var(--leaf-500);animation:pulse 1.3s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,154,63,.6)}100%{box-shadow:0 0 0 10px rgba(74,154,63,0)}}
+.canvas-wrap{aspect-ratio:4/3.2;border-radius:10px;overflow:hidden;background:#dbe9d3}
+#cv{display:block;width:100%;height:100%}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--meadow-50);border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:13px}
+.pill span{color:var(--ink-soft)}
+.pill b{font-weight:650}
+.sw{width:13px;height:13px;border-radius:50%;border:1px solid rgba(0,0,0,.25);display:inline-block}
+#visualNote{margin:10px 2px 0;font-size:13.5px}
+
+/* Notes and references */
+.more{max-width:1180px;margin:0 auto;padding:0 20px 36px}
+details{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin-top:12px}
+summary{cursor:pointer;font-weight:650;font-family:var(--head-font);font-size:16px;padding:4px 0}
+details p,details li{font-size:14px;max-width:80ch}
+details table{border-collapse:collapse;font-size:13px;margin:8px 0;display:block;overflow-x:auto}
+details th,details td{border:1px solid var(--line);padding:5px 9px;text-align:left}
+details th{background:var(--meadow-100)}
+a{color:var(--field-700)}
+
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;padding:10px;gap:12px}
+  .viz{order:-1;position:sticky;top:0;z-index:20;padding:8px 10px 10px;border-radius:0 0 14px 14px;box-shadow:0 6px 14px rgba(20,50,30,.18)}
+  .viz-head{margin-bottom:6px}
+  .canvas-wrap{aspect-ratio:auto;height:clamp(200px,31vh,330px)}
+  .badges{margin-top:8px;gap:4px}
+  .pill{font-size:12px;padding:3px 8px}
+  #visualNote{font-size:12.5px;margin-top:6px;line-height:1.4}
+  .more{padding:0 10px 30px}
+}
+@media (prefers-reduced-motion:reduce){
+  .live.on i{animation:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true">
+      <path d="M24 4c-1 8-1 14-1 20M24 4c6 5 8 12 7 20M24 4c-6 5-8 12-7 20" stroke="#9fd06a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M24 20c8 0 15 6 15 14 0 6-6 10-15 10S9 40 9 34c0-8 7-14 15-14z" fill="#a8375f"/>
+      <path d="M24 22c-4 4-6 10-5 21M24 22c4 4 6 10 5 21" stroke="#6a1d3d" stroke-width="1.5" fill="none"/>
+    </svg>
+    <div>
+      <h1>Onion Growth Simulator</h1>
+      <p>See how soil pH and iron change the color of your onion leaves and the size of the bulb. Made for growers in Bongabon, Nueva Ecija.</p>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- CONTROLS -->
+  <section class="panel controls" aria-label="Controls">
+
+    <div class="group">
+      <div class="lbl" id="lblMethod">Planting method</div>
+      <div class="seg" role="group" aria-labelledby="lblMethod">
+        <button type="button" data-method="tp" aria-pressed="true">Transplanting</button>
+        <button type="button" data-method="ds" aria-pressed="false">Direct seeding</button>
+      </div>
+      <p class="note" id="methodNote"></p>
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="ph">Soil pH</label><output id="phOut" for="ph"></output></div>
+      <input id="ph" type="range" min="0" max="14" step="0.1" value="7.9">
+      <div class="ticks"><span>0 acidic</span><span>7 neutral</span><span>14 alkaline</span></div>
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="fe">Iron (Fe) in the soil</label><output id="feOut" for="fe"></output></div>
+      <input id="fe" type="range" min="0" max="400" step="5" value="210">
+      <div class="ticks"><span>0 ppm</span><span>200</span><span>400 ppm</span></div>
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="variety">Onion variety</label><span class="badge" id="dayBadge">95 DAT</span></div>
+      <select id="variety"></select>
+      <div class="chips" role="group" aria-label="Try a scenario">
+        <button type="button" class="chip" data-ph="7.9" data-fe="210">Bongabon reference</button>
+        <button type="button" class="chip" data-ph="6.3" data-fe="150">Good pH, enough Fe</button>
+        <button type="button" class="chip" data-ph="8.6" data-fe="60">High pH, low Fe</button>
+        <button type="button" class="chip" data-ph="8.0" data-fe="400">High pH, lots of Fe</button>
+        <button type="button" class="chip" data-ph="3.8" data-fe="250">Very acidic</button>
+      </div>
+      <p class="note">Scenarios change pH and Fe from the current day onward. They do not restart the plant.</p>
+    </div>
+
+    <div class="group">
+      <dl class="info">
+        <div><dt>Effective Fe supply</dt><dd id="infoFe"></dd></div>
+        <div><dt>Soil pH status</dt><dd id="infoPh"></dd></div>
+        <div><dt>Current stage</dt><dd id="infoStage"></dd></div>
+      </dl>
+    </div>
+
+    <div class="group">
+      <div class="btnrow">
+        <button type="button" class="btn primary" id="play">Play</button>
+        <button type="button" class="btn" id="reset">Reset</button>
+      </div>
+      <div class="row" style="margin-top:10px"><label for="speed">Speed</label><output id="speedOut" for="speed"></output></div>
+      <input id="speed" type="range" min="1" max="20" step="1" value="5">
+      <div class="stepper">
+        <button type="button" class="btn" id="stepBack" aria-label="Go back one day">&minus;</button>
+        <div id="dayDisp">Day 0 / 95</div>
+        <button type="button" class="btn" id="stepFwd" aria-label="Go forward one day">+</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="lbl" id="lblReport">Live report</div>
+      <div class="report" id="report" tabindex="0" role="region" aria-labelledby="lblReport"></div>
+    </div>
+  </section>
+
+  <!-- VISUALIZATION -->
+  <section class="panel viz" aria-label="Onion field view">
+    <div class="viz-head">
+      <span class="title">Onion in the field</span>
+      <span class="live" id="live"><i></i><b id="liveTxt">Paused</b></span>
+    </div>
+    <div class="canvas-wrap" id="cvWrap">
+      <canvas id="cv" role="img" aria-label="Onion plant growing"></canvas>
+    </div>
+    <div class="badges">
+      <span class="pill"><i class="sw" id="swLeaf"></i><span>Leaf color</span><b id="bLeaf">-</b></span>
+      <span class="pill"><span>Chlorophyll</span><b id="bChl">-</b></span>
+      <span class="pill"><span>Stage</span><b id="bStage">-</b></span>
+    </div>
+    <p id="visualNote"></p>
+  </section>
+</main>
+
+<div class="more">
+  <details>
+    <summary>How the model works</summary>
+    <p>Each simulated day, the app combines soil pH and the iron you set to work out how much iron the onion can actually use. It does not judge iron from pH alone.</p>
+    <ul>
+      <li><b>Effective Fe = Fe concentration &times; pH factor.</b> The pH factor falls smoothly as soil gets more alkaline (about 1.1 at pH 5, 0.56 at pH 7, 0.27 at pH 7.9, 0.08 at pH 9).</li>
+      <li><b>Chlorophyll</b> rises with effective Fe until it levels off near 120 to 150 ppm. Very high effective Fe (above about 200 ppm) lowers chlorophyll slightly and risks toxicity. Chlorophyll moves toward its target over several days, so a fix takes time to show.</li>
+      <li><b>Growth</b> each day is scaled by that day's chlorophyll. Height, leaf number and bulb size are added up day by day, so pausing and changing pH or Fe changes only the days that follow.</li>
+      <li><b>Very acidic soil</b> (below about pH 5.5) slows growth even though iron is plentiful, because of other nutrient problems and metal toxicity. Lower pH is not always better.</li>
+      <li><b>Stages</b> scale with total duration. Transplanting: establishment, vegetative, bulbing (from 50%), maturity (from 85%). Direct seeding: germination (first 10 days), seedling, vegetative, bulbing (from 55%), maturity (from 85%).</li>
+    </ul>
+    <p>The thresholds (for example, "deficient" below about 60 ppm effective Fe) are a teaching model tuned to match the direction and size of the published results. They are not measured cutoffs. Use soil tests and your local agricultural technician for real fertilizer decisions.</p>
+    <table>
+      <tr><th>Reference value used</th><th>Source</th></tr>
+      <tr><td>Bongabon green onion: soil pH 7.80 to 7.97, height 41.91 cm, bulb 1.21 cm, NDVI 0.56. The default scenario (pH 7.9, Fe 210 ppm) gives about 42 cm and NDVI 0.56 for Red Pinoy.</td><td>Frontiers in Sustainable Food Systems (2025)</td></tr>
+      <tr><td>Shallot chlorophyll 4.99 mg/L (control) rising to 7.06 mg/L at 150 ppm Fe composite, then 6.28 mg/L at 400 ppm</td><td>Shallot 'Bima Brebes' Fe composite study</td></tr>
+      <tr><td>Onion chlorophyll 26.00 mg/g (Fe 0) rising to 28.41 mg/g (Fe 200 mg/L)</td><td>Semi-arid onion foliar iron study</td></tr>
+      <tr><td>Without added Fe: height 42.84 vs 46.46 cm, leaves 11.26 vs 12.83, bulb diameter 4.26 vs 4.68 cm (Fe 0 vs 30 kg/ha)</td><td>Journal of Farm Sciences, zinc and iron on onion</td></tr>
+      <tr><td>Height and leaf number rising over 60, 90 and 120 days after transplanting</td><td>Onion biofertilizer trial, Guanajuato, Mexico (2022)</td></tr>
+    </table>
+  </details>
+
+  <details>
+    <summary>Scientific references</summary>
+    <ul>
+      <li><a href="https://www.frontiersin.org/journals/sustainable-food-systems/articles/10.3389/fsufs.2025.1508115/full" target="_blank" rel="noopener">Frontiers in Sustainable Food Systems (2025): green onion soil and plant characteristics</a></li>
+      <li><a href="https://www.researchgate.net/publication/362885982_The_effect_of_alginate-zeolite_31_Fe_composite_on_physiological_characters_stomatal_density_and_yield_of_shallots_Allium_cepa_L_%27Bima_Brebes%27" target="_blank" rel="noopener">The effect of alginate:zeolite (3:1) Fe composite on shallots (Allium cepa L. 'Bima Brebes')</a></li>
+      <li><a href="https://www.researchgate.net/publication/353274080_Response_of_onion_growth_and_yield_grown_in_soils_of_semi-arid_regions_to_foliar_application_of_iron_under_water_stress_conditions" target="_blank" rel="noopener">Response of onion growth and yield in semi-arid soils to foliar application of iron under water stress</a></li>
+      <li><a href="https://journaloffarmsciences.in/index.php/JFM/article/download/6/5" target="_blank" rel="noopener">Journal of Farm Sciences: effect of zinc and iron on growth, yield and quality parameters of onion</a></li>
+      <li><a href="https://www.researchgate.net/publication/390360750_Growth_Health_Quality_and_Production_of_Onions_Allium_cepa_L_Inoculated_with_Systemic_Biological_Products" target="_blank" rel="noopener">Growth, health, quality and production of onions inoculated with systemic biological products (Guanajuato, Mexico)</a></li>
+      <li>Bongabon and Nueva Ecija onion production data: Red Pinoy about 90 to 95 days after transplanting.</li>
+      <li>Direct seeding versus transplanting durations: Ethiopia (about 135 vs 104 days) and Brazil (about 132 vs 102 days).</li>
+    </ul>
+    <p>Field durations used: Yellow Granex 90 DAT / 125 DAS, Red Pinoy 95 DAT / 130 DAS, Red Creole 115 DAT / 150 DAS.</p>
+  </details>
+</div>
+
+<noscript><p style="padding:20px">This simulator needs JavaScript turned on.</p></noscript>
+
+<script>
+'use strict';
+
+/* ============================================================
+   MODEL (pure logic, no DOM)
+   ============================================================ */
+// <MODEL>
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+
+const VARIETIES={
+  granex:{name:'Yellow Granex',tp:90, ds:125,hMax:48,dMax:6.0,lMax:11,aspect:0.80,
+          main:[226,183,84],dark:[168,124,40],light:[246,224,150]},
+  pinoy: {name:'Red Pinoy',    tp:95, ds:130,hMax:45,dMax:4.9,lMax:12,aspect:0.92,
+          main:[166,52,94], dark:[92,26,56], light:[206,110,144]},
+  creole:{name:'Red Creole',   tp:115,ds:150,hMax:52,dMax:5.4,lMax:13,aspect:0.96,
+          main:[140,36,80], dark:[74,18,44], light:[186,88,124]}
+};
+const METHODS={
+  tp:{label:'Transplanting',unit:'DAT',unitLong:'days after transplanting (DAT)',h0:15,l0:4.5,d0:0.9,
+      note:'Seedlings are raised in a nursery for about 45 days, then planted out. They arrive already established (about 4 to 5 leaves, 15 cm), so the time in the field is shorter.'},
+  ds:{label:'Direct seeding',unit:'DAS',unitLong:'days after sowing (DAS)',h0:0,l0:0,d0:0.15,
+      note:'Seeds are sown straight into the field, so the whole cycle happens there, about 35 days longer than transplanting. The plant starts as a seed with no leaves.'}
+};
+const GERM_DAYS=10;
+
+const S={method:'tp',variety:'pinoy',ph:7.9,fe:210,speed:5,playing:false,acc:0,records:[],d:null};
+const totalDays=()=>VARIETIES[S.variety][S.method];
+
+function logistic(x,k,x0){return 1/(1+Math.exp(-k*(x-x0)));}
+function normLog(x,k,x0){x=clamp(x,0,1);const a=logistic(0,k,x0),b=logistic(1,k,x0);return (logistic(x,k,x0)-a)/(b-a);}
+
+// pH -> Fe availability factor, Fe -> chlorophyll target, growth penalties
+function envModel(ph,fe){
+  const phF=Math.min(1.2,1.2/(1+Math.exp(1.25*(ph-6.9))));
+  const E=fe*phF;                                   // effective Fe supply
+  const sat=1-Math.exp(-Math.pow(E/60,1.6));        // saturating response
+  const tox=1-0.25*clamp((E-200)/300,0,1);          // too much Fe
+  const acid=clamp((5.5-ph)/2.0,0,1);               // very acidic stress
+  const alk=clamp((ph-8.5)/1.5,0,1);                // very alkaline stress
+  const target=clamp((0.25+0.75*sat)*tox*(1-0.15*acid),0.05,1);
+  const pm=1-0.5*acid-0.15*alk;                     // growth multiplier from pH stress
+  return {phF,E,target,tox,acid,alk,pm};
+}
+function feStatus(E){
+  if(E<25) return {key:'severe',label:'Severe deficiency',cls:'bad'};
+  if(E<60) return {key:'deficient',label:'Deficient',cls:'bad'};
+  if(E<90) return {key:'marginal',label:'Marginal',cls:'warn'};
+  if(E<200) return {key:'adequate',label:'Adequate',cls:'good'};
+  if(E<320) return {key:'high',label:'High',cls:'warn'};
+  return {key:'excess',label:'Excessive',cls:'bad'};
+}
+function phLabel(ph){
+  ph=Math.round(ph*10)/10;
+  if(ph<4.5) return 'Extremely acidic';
+  if(ph<5.5) return 'Strongly acidic';
+  if(ph<6.5) return 'Acidic';
+  if(ph<7) return 'Slightly acidic';
+  if(ph===7) return 'Neutral';
+  if(ph<=7.5) return 'Slightly alkaline';
+  if(ph<=8.5) return 'Alkaline';
+  return 'Strongly alkaline';
+}
+
+function topProg(d,T,m){
+  const x=m==='ds'?(d-GERM_DAYS)/(0.72*T-GERM_DAYS):d/(0.72*T);
+  return normLog(x,6,m==='ds'?0.42:0.36);
+}
+function bulbProg(d,T){return normLog(d/T,11,0.70);}
+
+function stageList(method,T){
+  return method==='ds'
+    ?[{n:'Germination',s:0},{n:'Seedling',s:GERM_DAYS/T},{n:'Vegetative',s:0.22},{n:'Bulbing',s:0.55},{n:'Maturity',s:0.85}]
+    :[{n:'Establishment',s:0},{n:'Vegetative',s:0.10},{n:'Bulbing',s:0.50},{n:'Maturity',s:0.85}];
+}
+function stageAt(d,T,method){
+  const f=d/T;let cur=null;
+  for(const it of stageList(method,T)) if(f>=it.s-1e-9) cur=it.n;
+  return cur;
+}
+
+function initRecords(){
+  S.records=[{d:0,ci:0.97,target:0.97,E:null,phF:null,ph:S.ph,fe:S.fe,hf:1,lf:1,bf:1,def:false,ex:false,acid:0,lock:false}];
+}
+function stepDay(){
+  const prev=S.records[S.records.length-1];
+  const env=envModel(S.ph,S.fe);
+  const ci=prev.ci+(env.target-prev.ci)*0.12;
+  S.records.push({
+    d:S.records.length,ci,target:env.target,E:env.E,phF:env.phF,ph:S.ph,fe:S.fe,tox:env.tox,
+    hf:Math.pow(ci,0.3)*env.pm,lf:Math.pow(ci,0.4)*env.pm,bf:Math.pow(ci,0.4)*env.pm,
+    def:env.E<60,ex:env.E>=320,acid:env.acid,lock:(S.fe>=100&&env.phF<0.5&&env.E<60)
+  });
+}
+
+// Rebuild everything from the stored daily factors (so variety can change mid-run)
+function derive(){
+  const v=VARIETIES[S.variety],m=METHODS[S.method],T=v[S.method],recs=S.records,n=recs.length-1;
+  let hA=0,lA=0,bA=0,pg=0,pb=0;
+  for(let d=1;d<=n;d++){
+    const r=recs[d],g=topProg(d,T,S.method),b=bulbProg(d,T);
+    hA+=(g-pg)*r.hf; lA+=(g-pg)*r.lf; bA+=(b-pb)*r.bf; pg=g; pb=b;
+  }
+  const height=m.h0+(v.hMax-m.h0)*hA;
+  const leaves=m.l0+(v.lMax-m.l0)*lA;
+  const bulb=m.d0+(v.dMax-m.d0)*bA;
+  const f=n/T,sen=smooth((f-0.85)/0.15);
+  let minCI=null,minDay=null,defDays=0,exDays=0,acidDays=0,lockDays=0,fieldDays=0;
+  const first=S.method==='ds'?GERM_DAYS:0;
+  for(let d=first;d<=n;d++){
+    const r=recs[d];
+    if(minCI===null||r.ci<minCI){minCI=r.ci;minDay=d;}
+    if(d>=1){fieldDays++;if(r.def)defDays++;if(r.ex)exDays++;if(r.acid>0.2)acidDays++;if(r.lock)lockDays++;}
+  }
+  const cur=recs[n];
+  const emerged=leaves>0.02;
+  const canopy=emerged?clamp(0.6*(leaves/v.lMax)+0.4*(height/v.hMax),0.04,1)*(1-0.5*sen):0;
+  const ndvi=0.15+((0.2+0.52*cur.ci)-0.15)*canopy;
+  return {n,T,f,sen,height,leaves,leafN:emerged?Math.ceil(leaves-1e-9):0,leafCount:emerged?Math.max(1,Math.round(leaves)):0,
+          bulb,ci:cur.ci,target:cur.target,minCI,minDay,defDays,exDays,acidDays,lockDays,fieldDays,
+          stage:stageAt(n,T,S.method),germ:(S.method==='ds'&&n<GERM_DAYS),done:n>=T,ndvi,chl:cur.ci*7.06,emerged};
+}
+// </MODEL>
+
+/* ============================================================
+   UI + DRAWING
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d'),cvWrap=$('cvWrap');
+const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let view=null,swayT=0;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rnd=mulberry32(20240);
+const JIT=Array.from({length:20},()=>({len:rnd()-0.5,ang:rnd(),w:rnd()-0.5,drp:rnd()-0.3,ph:rnd()*6.28}));
+const SPECKS=Array.from({length:170},()=>({x:rnd(),y:rnd(),r:0.8+rnd()*2.4,light:rnd()<0.45}));
+const ROOTJ=Array.from({length:16},()=>({a:rnd()-0.5,l:0.6+rnd()*0.6}));
+
+const mixRGB=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)];
+const rgb=a=>`rgb(${a[0]|0},${a[1]|0},${a[2]|0})`;
+const hslStr=(c,dl=0,a)=>{const l=clamp(c.l+dl,0,100);return a==null?`hsl(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${l.toFixed(1)}%)`:`hsla(${c.h.toFixed(1)},${c.s.toFixed(1)}%,${l.toFixed(1)}%,${a})`;};
+
+function leafHSL(ci){
+  const l=clamp((ci-0.3)/0.65,0,1);
+  return {h:lerp(58,122,Math.pow(l,0.9)),s:lerp(70,52,l),l:lerp(64,31,l)};
+}
+const STRAW={h:46,s:48,l:56};
+const mixHSL=(a,b,t)=>({h:lerp(a.h,b.h,t),s:lerp(a.s,b.s,t),l:lerp(a.l,b.l,t)});
+
+const SOIL_STOPS=[[0,[110,45,31]],[4,[133,64,43]],[6,[122,85,55]],[7,[107,90,66]],[8,[168,148,116]],[9,[200,184,149]],[14,[224,213,187]]];
+function soilColor(ph){
+  for(let i=1;i<SOIL_STOPS.length;i++){
+    if(ph<=SOIL_STOPS[i][0]){
+      const a=SOIL_STOPS[i-1],b=SOIL_STOPS[i];
+      return mixRGB(a[1],b[1],(ph-a[0])/(b[0]-a[0]));
+    }
+  }
+  return SOIL_STOPS[SOIL_STOPS.length-1][1];
+}
+
+function rr(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+function resizeCanvas(){
+  const r=cvWrap.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  cv.width=Math.max(1,Math.round(r.width*dpr));
+  cv.height=Math.max(1,Math.round(r.height*dpr));
+  view={W:r.width,H:r.height,dpr};
+  draw();
+}
+
+function ridge(W,gy,base,amp,color,seed){
+  ctx.beginPath();ctx.moveTo(0,gy);
+  for(let x=0;x<=W;x+=6){
+    const u=x/W;
+    const y=gy-base-amp*(0.5*Math.sin(u*5+seed)+0.3*Math.sin(u*11+seed*2)+0.7);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,gy);ctx.closePath();ctx.fillStyle=color;ctx.fill();
+}
+
+function draw(){
+  if(!view||!S.d) return;
+  const {W,H,dpr}=view,D=S.d,v=VARIETIES[S.variety];
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const gy=Math.round(H*0.70);
+
+  // sky and hills
+  const sky=ctx.createLinearGradient(0,0,0,gy);
+  sky.addColorStop(0,'#bcdbe4');sky.addColorStop(1,'#eef5dc');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,gy);
+  ridge(W,gy,H*0.09,H*0.09,'#a9c8b4',1.3);
+  ridge(W,gy,H*0.02,H*0.06,'#8fbb8a',4.1);
+
+  // soil (cross-section view)
+  const sc=soilColor(S.ph);
+  ctx.fillStyle=rgb(sc);ctx.fillRect(0,gy,W,H-gy);
+  const sg=ctx.createLinearGradient(0,gy,0,H);
+  sg.addColorStop(0,'rgba(0,0,0,0.16)');sg.addColorStop(0.35,'rgba(0,0,0,0)');sg.addColorStop(1,'rgba(0,0,0,0.12)');
+  ctx.fillStyle=sg;ctx.fillRect(0,gy,W,H-gy);
+  for(const p of SPECKS){
+    ctx.fillStyle=p.light?'rgba(255,255,255,0.16)':'rgba(0,0,0,0.13)';
+    ctx.beginPath();ctx.ellipse(p.x*W,gy+6+p.y*(H-gy-6),p.r,p.r*0.7,0,0,6.283);ctx.fill();
+  }
+  ctx.fillStyle='rgba(0,0,0,0.22)';ctx.fillRect(0,gy-1,W,2);
+
+  drawPlant(W,H,gy,D,v);
+  drawOverlay(W,H,D);
+}
+
+function drawSeedStage(cx,gy,n,S1){
+  const p=n/GERM_DAYS,sy=gy+26*S1;
+  // radicle (first root)
+  const rl=Math.min(1,n/5)*40*S1;
+  ctx.strokeStyle='#f1e8d2';ctx.lineWidth=Math.max(1.2,2*S1);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(cx,sy+3);ctx.quadraticCurveTo(cx+4*S1,sy+3+rl*0.5,cx+9*S1,sy+3+rl);ctx.stroke();
+  if(n>=3){
+    ctx.lineWidth=Math.max(0.8,1*S1);
+    ctx.beginPath();ctx.moveTo(cx+3*S1,sy+3+rl*0.45);ctx.lineTo(cx-8*S1,sy+3+rl*0.7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+5*S1,sy+3+rl*0.6);ctx.lineTo(cx+16*S1,sy+3+rl*0.8);ctx.stroke();
+  }
+  // shoot with "crook" that straightens as it reaches the surface
+  const sp=clamp((p-0.3)/0.7,0,1);
+  if(sp>0){
+    const h=sp*44*S1,top=sy-3-h;
+    ctx.strokeStyle='#e3efc6';ctx.lineWidth=Math.max(1.6,2.6*S1);
+    ctx.beginPath();ctx.moveTo(cx,sy-3);ctx.lineTo(cx,top);
+    if(sp<0.85){ctx.quadraticCurveTo(cx+1,top-9*S1,cx+10*S1,top+6*S1);}
+    ctx.stroke();
+    if(sp<0.85){ctx.fillStyle='#1e1a17';ctx.beginPath();ctx.ellipse(cx+10*S1,top+7*S1,2.6*S1+0.6,1.8*S1+0.5,0.6,0,6.283);ctx.fill();}
+  }
+  // the seed
+  ctx.fillStyle='#1e1a17';
+  ctx.beginPath();ctx.ellipse(cx,sy,4.2*S1+1.5,3*S1+1.2,-0.5,0,6.283);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.beginPath();ctx.ellipse(cx-1,sy-1,1.5*S1+0.5,0.9*S1+0.3,-0.5,0,6.283);ctx.fill();
+}
+
+function drawLeaf(bx,by,len,ang,curl,droop,w0,col,gy,tox){
+  const N=16,pts=[];
+  for(let i=0;i<=N;i++){
+    const t=i/N;
+    let x=bx+len*(Math.sin(ang)*t+curl*t*t);
+    let y=by-len*Math.cos(ang)*t+len*droop*t*t;
+    if(y>gy-2) y=gy-2;
+    pts.push([x,y,t]);
+  }
+  const L=[],R=[],nrm=[],hws=[];
+  for(let i=0;i<=N;i++){
+    const a=pts[Math.max(0,i-1)],b=pts[Math.min(N,i+1)];
+    let dx=b[0]-a[0],dy=b[1]-a[1];const m=Math.hypot(dx,dy)||1;dx/=m;dy/=m;
+    const nx=-dy,ny=dx,t=pts[i][2];
+    const hw=0.5*w0*Math.pow(1-Math.pow(t,2.4),0.6)+0.15;
+    hws.push(hw);nrm.push([nx,ny]);
+    L.push([pts[i][0]+nx*hw,pts[i][1]+ny*hw]);
+    R.push([pts[i][0]-nx*hw,pts[i][1]-ny*hw]);
+  }
+  ctx.beginPath();ctx.moveTo(L[0][0],L[0][1]);
+  for(let i=1;i<=N;i++) ctx.lineTo(L[i][0],L[i][1]);
+  for(let i=N;i>=0;i--) ctx.lineTo(R[i][0],R[i][1]);
+  ctx.closePath();
+  ctx.fillStyle=hslStr(col);ctx.fill();
+  ctx.lineWidth=0.7;ctx.strokeStyle=hslStr(col,-11);ctx.stroke();
+  // highlight along one side gives the leaf depth
+  ctx.beginPath();
+  for(let i=1;i<=Math.floor(N*0.8);i++){
+    const px=pts[i][0]-nrm[i][0]*hws[i]*0.42,py=pts[i][1]-nrm[i][1]*hws[i]*0.42;
+    if(i===1) ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  }
+  ctx.strokeStyle=hslStr(col,17,0.5);ctx.lineWidth=Math.max(0.7,hws[3]*0.55);ctx.lineCap='round';ctx.stroke();
+  // tip burn when iron is excessive
+  if(tox>0.08){
+    ctx.beginPath();
+    for(let i=Math.floor(N*0.86);i<=N;i++){if(i===Math.floor(N*0.86))ctx.moveTo(pts[i][0],pts[i][1]);else ctx.lineTo(pts[i][0],pts[i][1]);}
+    ctx.strokeStyle=`rgba(112,66,28,${(0.35+0.6*tox).toFixed(2)})`;ctx.lineWidth=Math.max(1,w0*0.3);ctx.lineCap='round';ctx.stroke();
+  }
+}
+
+function drawPlant(W,H,gy,D,v){
+  const cx=W*0.5,S1=H/380,pxCm=H*0.0092,bpx=H*0.023;
+  if(D.germ){drawSeedStage(cx,gy,D.n,S1);return;}
+
+  const rx=Math.max(1.4,D.bulb*bpx/2),ry=rx*v.aspect;
+  const topY=gy-2*ry*0.86,botY=topY+2*ry;
+  const rec=S.records[S.records.length-1];
+
+  // roots (visible in the cross-section)
+  const rs=S.method==='tp'?0.35+0.65*smooth(D.f/0.5):(D.n<=GERM_DAYS?0.1:0.1+0.9*smooth((D.n-GERM_DAYS)/(0.5*D.T)));
+  ctx.strokeStyle='rgba(240,230,205,0.88)';ctx.lineCap='round';
+  for(let i=0;i<ROOTJ.length;i++){
+    const j=ROOTJ[i],k=(i-(ROOTJ.length-1)/2)/((ROOTJ.length-1)/2);
+    const sx=cx+k*rx*0.5,sy2=botY-2;
+    const len=(16+62*rs)*S1*j.l;
+    const ex=sx+k*(10+34*rs)*S1+j.a*10*S1,ey=sy2+len;
+    ctx.lineWidth=Math.max(0.7,1.1*S1);
+    ctx.beginPath();ctx.moveTo(sx,sy2);ctx.quadraticCurveTo(sx+k*8*S1,sy2+len*0.55,ex,Math.min(ey,view.H-44));ctx.stroke();
+  }
+
+  // leaves
+  const n=D.leafN,hpx=D.height*pxCm;
+  const growth=clamp(D.height/v.hMax,0,1);
+  const spreadMax=lerp(5,36,smooth(growth*1.1))*Math.PI/180;
+  const psH=clamp(hpx*0.16,5*S1,64*S1),psW=Math.max(2,rx*0.27+0.8);
+  const defSev=clamp((0.9-D.ci)/0.5,0,1);
+  const tox=rec.tox!=null?clamp((rec.E-200)/300,0,1):0;
+  const fullLen=v.hMax*pxCm;
+  for(let j=0;j<n;j++){
+    const rank=n>1?(n-1-j)/(n-1):0;   // 0 = newest, 1 = oldest
+    const e=clamp(D.leaves-j,0,1);
+    if(e<=0) continue;
+    const J=JIT[j%JIT.length];
+    const sgn=(j%2===0)?-1:1;
+    const easeE=e<1?smooth(e):1;
+    let len=hpx*(1-0.2*rank+J.len*0.12)*easeE*(1-0.3*D.sen);
+    len=Math.max(len,4*S1);
+    const sway=(reduceMotion?0:Math.sin(swayT*1.3+J.ph)*0.018);
+    const ang=sgn*(rank*spreadMax+(2+J.ang*4)*Math.PI/180)+sway;
+    const curl=sgn*(0.04+0.16*rank*growth+0.05*D.sen);
+    const droop=0.06*rank*growth+0.9*D.sen*(0.5+0.5*rank)+J.drp*0.05;
+    const w0=(1.4+4.6*clamp(len/fullLen,0,1))*S1*(0.92+J.w*0.16);
+    const bx=cx+sgn*rank*psW*0.5,by=topY-psH*(0.55+0.3*(1-rank));
+    // younger leaves show iron shortage first
+    const ciLeaf=D.ci*(1-0.28*(1-rank)*defSev);
+    let col=leafHSL(ciLeaf);col.l+=J.w*4;
+    col=mixHSL(col,STRAW,clamp(0.9*D.sen*(0.4+0.6*rank),0,1));
+    drawLeaf(bx,by,len,ang,curl,droop,w0,col,gy,tox);
+  }
+
+  // pseudostem (leaf bases wrapped together)
+  const pg=ctx.createLinearGradient(cx-psW,0,cx+psW,0);
+  pg.addColorStop(0,'hsl(84,34%,76%)');pg.addColorStop(0.5,'hsl(82,32%,90%)');pg.addColorStop(1,'hsl(84,34%,74%)');
+  ctx.fillStyle=pg;
+  ctx.beginPath();
+  ctx.moveTo(cx-psW,topY+2);ctx.lineTo(cx-psW*0.8,topY-psH*0.9);
+  ctx.quadraticCurveTo(cx,topY-psH*0.96,cx+psW*0.8,topY-psH*0.9);
+  ctx.lineTo(cx+psW,topY+2);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(60,90,40,0.25)';ctx.lineWidth=0.7;ctx.stroke();
+
+  // bulb
+  const tB=smooth((D.bulb-0.9)/(v.dMax*0.55));
+  const imm={main:[214,228,182],dark:[160,184,120],light:[240,246,222]};
+  const mainC=rgb(mixRGB(imm.main,v.main,tB)),darkC=rgb(mixRGB(imm.dark,v.dark,tB)),lightC=rgb(mixRGB(imm.light,v.light,tB));
+  const nw=Math.max(psW,rx*0.22);
+  const bg=ctx.createRadialGradient(cx-rx*0.35,topY+ry*0.7,rx*0.1,cx,topY+ry,rx*1.35);
+  bg.addColorStop(0,lightC);bg.addColorStop(0.55,mainC);bg.addColorStop(1,darkC);
+  ctx.beginPath();
+  ctx.moveTo(cx-nw,topY);
+  ctx.bezierCurveTo(cx-nw,topY+ry*0.45,cx-rx,topY+ry*0.4,cx-rx,topY+ry*1.1);
+  ctx.bezierCurveTo(cx-rx,topY+ry*1.9,cx-rx*0.55,botY,cx,botY);
+  ctx.bezierCurveTo(cx+rx*0.55,botY,cx+rx,topY+ry*1.9,cx+rx,topY+ry*1.1);
+  ctx.bezierCurveTo(cx+rx,topY+ry*0.4,cx+nw,topY+ry*0.45,cx+nw,topY);
+  ctx.closePath();
+  ctx.fillStyle=bg;ctx.fill();
+  ctx.lineWidth=0.9;ctx.strokeStyle=darkC;ctx.stroke();
+  if(rx>7){
+    ctx.strokeStyle='rgba(0,0,0,0.16)';ctx.lineWidth=0.8;
+    for(let k=-2;k<=2;k++){
+      ctx.beginPath();ctx.moveTo(cx+k*nw*0.5,topY+ry*0.25);
+      ctx.bezierCurveTo(cx+k*rx*0.95,topY+ry*0.9,cx+k*rx*0.8,topY+ry*1.6,cx+k*rx*0.25,botY-ry*0.06);ctx.stroke();
+    }
+    ctx.fillStyle='rgba(255,255,255,0.22)';
+    ctx.beginPath();ctx.ellipse(cx-rx*0.4,topY+ry*0.85,rx*0.16,ry*0.32,-0.4,0,6.283);ctx.fill();
+  }
+}
+
+function drawOverlay(W,H,D){
+  const fnt='600 12.5px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  ctx.font=fnt;ctx.textBaseline='middle';
+  // stage pill (top left)
+  const stTxt='Stage: '+D.stage,tw=ctx.measureText(stTxt).width;
+  ctx.fillStyle='rgba(20,54,32,0.86)';rr(10,10,tw+20,26,13);ctx.fill();
+  ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(stTxt,20,23);
+  // day chip (top right)
+  const dTxt='Day '+D.n+' / '+D.T,dw=ctx.measureText(dTxt).width;
+  ctx.fillStyle='rgba(20,54,32,0.86)';rr(W-dw-30,10,dw+20,26,13);ctx.fill();
+  ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(dTxt,W-dw-20,23);
+  // bottom progress strip
+  const bandH=38;
+  ctx.fillStyle='rgba(24,28,18,0.6)';ctx.fillRect(0,H-bandH,W,bandH);
+  ctx.fillStyle='#fff';ctx.font='600 12px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  const unit=METHODS[S.method].unit;
+  ctx.textAlign='left';ctx.fillText(D.n+' of '+D.T+' '+unit,12,H-bandH+12);
+  ctx.textAlign='right';ctx.fillText(D.done?'Harvest ready':Math.round(D.f*100)+'% of the way',W-12,H-bandH+12);
+  const bx=12,bw=W-24,by=H-14;
+  ctx.fillStyle='rgba(255,255,255,0.25)';rr(bx,by-3,bw,6,3);ctx.fill();
+  if(D.f>0){ctx.fillStyle=D.done?'#e3a21a':'#9ad15e';rr(bx,by-3,Math.max(6,bw*D.f),6,3);ctx.fill();}
+  ctx.fillStyle='rgba(255,255,255,0.75)';
+  for(const it of stageList(S.method,D.T)){ if(it.s>0) ctx.fillRect(bx+bw*it.s-0.5,by-5,1,10); }
+  ctx.textAlign='left';
+}
+
+/* ---------- text helpers ---------- */
+function leafColorName(ci,sen){
+  if(sen>0.55) return 'Ripening (natural)';
+  if(ci>=0.9) return 'Deep green';
+  if(ci>=0.8) return 'Green';
+  if(ci>=0.65) return 'Light green';
+  if(ci>=0.5) return 'Pale yellow-green';
+  return 'Yellow';
+}
+function leafHealth(ci){
+  if(ci>=0.88) return 'Healthy';
+  if(ci>=0.75) return 'Slight paleness';
+  if(ci>=0.6) return 'Yellowing, newest leaves first';
+  return 'Severe yellowing (chlorosis)';
+}
+function feExplain(env,st){
+  const t={
+    severe:'Iron is far too low. Expect strong yellowing of the newest leaves.',
+    deficient:'Iron is below the level that keeps chlorophyll fully up. Younger leaves turn pale first.',
+    marginal:'Iron is close to enough. Chlorophyll is slightly reduced.',
+    adequate:'Iron supply is enough to keep chlorophyll high and leaves green.',
+    high:'More iron than the plant needs. No extra benefit.',
+    excess:'Iron is high enough to risk toxicity, with stunting and browning leaf tips.'
+  }[st.key];
+  const lock=(S.fe>=100&&env.phF<0.5&&env.E<90)?' The soil holds iron, but high pH makes it hard for roots to take it up.':'';
+  return t+lock;
+}
+function visualNote(D,env){
+  if(D.germ) return 'Seed stage. The seed swells and sends down a root, then a bent shoot pushes up through the soil. The first leaf appears after day '+GERM_DAYS+'.';
+  let msg;
+  if(S.ph<4.5) msg='Extremely acidic soil. Iron is very available, but other nutrient problems and metal toxicity slow growth. More acidic is not better.';
+  else if(env.E>=320) msg='Too much iron is available. Leaf tips can brown and growth can slow (toxicity risk).';
+  else if(D.ci<0.55) msg='Leaves are pale to yellow. The newest leaves show iron shortage first. In alkaline soil, iron can be locked up even when the soil contains it.';
+  else if(D.ci<0.8) msg='Leaves are losing some green color. Watch the newest leaves for yellowing.';
+  else msg='Leaves are green: enough iron is reaching the plant.';
+  return msg+' Soil color hints at pH (reddish is acidic, pale is alkaline). The bulb is drawn larger than true scale so you can see it.';
+}
+const f1=x=>(Math.round(x*10)/10).toFixed(1);
+
+function harvestHTML(D,v){
+  const bulbPct=D.bulb/v.dMax;
+  const grade=bulbPct>=0.93?'Excellent':bulbPct>=0.85?'Good':bulbPct>=0.75?'Fair':'Poor';
+  let why=[];
+  if(D.defDays>0.15*D.fieldDays){
+    why.push(`Iron was limiting on ${D.defDays} of ${D.fieldDays} days, and chlorophyll dropped to ${Math.round(D.minCI*100)}% on day ${D.minDay}.`);
+    if(D.lockDays>0.5*D.defDays) why.push('Most of that time the soil had iron but high pH locked it up. Lowering pH, or using iron a plant can take up despite high pH (such as a foliar spray), would help more than adding soil iron.');
+    else why.push('Iron in the soil was simply low, so more available iron would help.');
+  }
+  if(D.exDays>3) why.push(`Effective iron was excessive on ${D.exDays} days. Too much iron can stunt plants and brown leaf tips.`);
+  if(D.acidDays>5) why.push(`Soil was very acidic on ${D.acidDays} days. That slowed growth even though iron was plentiful.`);
+  if(!why.length) why.push('Iron supply stayed adequate through the season, so chlorophyll stayed near its best.');
+  return `<div class="harvest"><h4>Harvest: ${grade}</h4>
+    <p>At ${D.T} ${METHODS[S.method].unitLong.split(' (')[0]}, the bulb is ${f1(D.bulb)} cm across (${Math.round(bulbPct*100)}% of the ${v.dMax.toFixed(1)} cm this variety can reach), the plant is ${f1(D.height)} cm tall, with ${D.leafCount} leaves.</p>
+    <p>${why.join(' ')}</p>
+    <p>For comparison, in the zinc and iron trial, plants without added iron had bulbs about 9% smaller (4.26 vs 4.68 cm).</p></div>`;
+}
+
+const row=(k,val)=>`<div class="r"><dt>${k}</dt><dd>${val}</dd></div>`;
+
+function renderReport(D,env,st){
+  const v=VARIETIES[S.variety],m=METHODS[S.method];
+  const dotHTML=`<span class="dot ${st.cls}"></span>`;
+  let trend='';
+  if(D.n>0&&!D.germ){
+    const diff=env.target-D.ci;
+    trend=Math.abs(diff)<0.02?'steady':(diff>0?'rising':'falling')+' toward '+Math.round(env.target*100)+'% under current settings';
+  }
+  const pre=D.germ;
+  let html='';
+  html+='<h4>Field</h4><dl>'+
+    row('Day',`${D.n} of ${D.T}`)+
+    row('Field duration',`${D.T} ${m.unitLong}`)+
+    row('Variety',v.name)+
+    row('Planting method',m.label)+'</dl>';
+  html+='<h4>Soil and iron (right now)</h4><dl>'+
+    row('Soil pH',`${f1(S.ph)}, ${phLabel(S.ph).toLowerCase()}`)+
+    row('Effective Fe supply',`${Math.round(env.E)} ppm (${S.fe} &times; ${env.phF.toFixed(2)})`)+
+    row('Iron status',`${dotHTML}${st.label}`)+'</dl>'+
+    `<p>${feExplain(env,st)}</p>`;
+  html+='<h4>Leaves</h4><dl>'+
+    row('Chlorophyll now',pre?'Not yet (no leaves)':`${Math.round(D.ci*100)}% of best (about ${D.chl.toFixed(1)} mg/L)`)+
+    row('Trend',pre?'-':trend||'-')+
+    row('Leaf health',pre?'-':leafHealth(D.ci))+
+    row('Lowest chlorophyll',D.minCI===null?'-':`${Math.round(D.minCI*100)}% on day ${D.minDay}`)+
+    row('Fe-deficient days',pre?'0':`${D.defDays} of ${D.fieldDays}`)+'</dl>';
+  html+='<h4>Growth</h4><dl>'+
+    row('Plant height',`${f1(D.height)} cm`)+
+    row('Bulb diameter',`${f1(D.bulb)} cm`)+
+    row('Leaf number',pre?'0':String(D.leafCount))+
+    row('Greenness (NDVI, estimated)',pre?'-':D.ndvi.toFixed(2))+'</dl>';
+  if(D.sen>0.3) html+='<p>The tops are yellowing and falling over because the plant is ripening. This is natural and is not iron deficiency.</p>';
+  if(D.done) html+=harvestHTML(D,v);
+  else if(D.n===0) html+='<p>Press Play to start. You can pause at any time, change pH or iron, and continue.</p>';
+  $('report').innerHTML=html;
+}
+
+/* ---------- refresh ---------- */
+function refreshUI(){
+  const D=S.d,v=VARIETIES[S.variety],m=METHODS[S.method];
+  const env=envModel(S.ph,S.fe),st=feStatus(env.E);
+
+  $('phOut').textContent=`${f1(S.ph)} (${phLabel(S.ph).toLowerCase()})`;
+  $('feOut').textContent=`${S.fe} ppm`;
+  $('speedOut').textContent=`${S.speed} ${S.speed===1?'day':'days'} per second`;
+  $('methodNote').textContent=m.note;
+  $('dayBadge').textContent=`${D.T} ${m.unit}`;
+  for(const opt of $('variety').options){opt.textContent=`${VARIETIES[opt.value].name} (${VARIETIES[opt.value][S.method]} ${m.unit})`;}
+
+  $('infoFe').innerHTML=`<span class="dot ${st.cls}"></span>${Math.round(env.E)} ppm, ${st.label.toLowerCase()}`;
+  $('infoPh').textContent=`${f1(S.ph)}: ${phLabel(S.ph).toLowerCase()}`;
+  $('infoStage').textContent=D.stage;
+  $('dayDisp').textContent=`Day ${D.n} / ${D.T}`;
+
+  const col=leafHSL(D.ci);
+  $('swLeaf').style.background=D.germ?'#ddd':hslStr(mixHSL(col,STRAW,clamp(0.9*D.sen,0,1)));
+  $('bLeaf').textContent=D.germ?'No leaves yet':leafColorName(D.ci,D.sen);
+  $('bChl').textContent=D.germ?'-':`${Math.round(D.ci*100)}% (${D.chl.toFixed(1)} mg/L)`;
+  $('bStage').textContent=D.stage;
+  $('visualNote').textContent=visualNote(D,env);
+  cv.setAttribute('aria-label',D.germ?`Onion seed germinating, day ${D.n}.`:`Onion at day ${D.n} of ${D.T}: ${D.leafCount} leaves, ${f1(D.height)} cm tall, bulb ${f1(D.bulb)} cm, leaves ${leafColorName(D.ci,D.sen).toLowerCase()}.`);
+
+  const play=$('play');
+  play.textContent=S.playing?'Pause':(D.done?'Replay':(D.n>0?'Resume':'Play'));
+  $('stepBack').disabled=D.n<=0;
+  $('stepFwd').disabled=D.done;
+  const live=$('live');
+  live.classList.toggle('on',S.playing);
+  $('liveTxt').textContent=S.playing?'Growing':(D.done?'Harvest reached':'Paused');
+
+  renderReport(D,env,st);
+  draw();
+}
+function recompute(){S.d=derive();refreshUI();}
+
+/* ---------- animation loop ---------- */
+let raf=0,lastTs=0;
+function loop(ts){
+  if(!S.playing){raf=0;return;}
+  const dt=Math.min(0.1,(ts-lastTs)/1000);lastTs=ts;
+  swayT+=dt;
+  S.acc+=dt*S.speed;
+  let stepped=false;
+  const T=totalDays();
+  while(S.acc>=1&&S.records.length-1<T){stepDay();S.acc-=1;stepped=true;}
+  if(S.records.length-1>=T){S.playing=false;S.acc=0;stepped=true;}
+  if(stepped) recompute();else draw();
+  if(S.playing) raf=requestAnimationFrame(loop);else raf=0;
+}
+function play(){
+  if(S.d.done){initRecords();}
+  S.playing=true;S.acc=0;lastTs=performance.now();
+  recompute();
+  if(!raf) raf=requestAnimationFrame(loop);
+}
+function pause(){S.playing=false;S.acc=0;recompute();}
+
+/* ---------- wiring ---------- */
+function setMethod(m){
+  S.method=m;S.playing=false;S.acc=0;initRecords();
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.method===m)));
+  recompute();
+}
+function init(){
+  const sel=$('variety');
+  for(const k of Object.keys(VARIETIES)){const o=document.createElement('option');o.value=k;sel.appendChild(o);}
+  sel.value=S.variety;
+  initRecords();
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.method!==S.method)setMethod(b.dataset.method);}));
+  $('ph').addEventListener('input',e=>{S.ph=Math.round(parseFloat(e.target.value)*10)/10;recompute();});
+  $('fe').addEventListener('input',e=>{S.fe=parseInt(e.target.value,10);recompute();});
+  $('speed').addEventListener('input',e=>{S.speed=parseInt(e.target.value,10);recompute();});
+  sel.addEventListener('change',e=>{
+    S.variety=e.target.value;
+    const T=totalDays();
+    if(S.records.length-1>T) S.records.length=T+1;
+    if(S.records.length-1>=T) S.playing=false;
+    recompute();
+  });
+  document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    S.ph=parseFloat(c.dataset.ph);S.fe=parseInt(c.dataset.fe,10);
+    $('ph').value=S.ph;$('fe').value=S.fe;recompute();
+  }));
+  $('play').addEventListener('click',()=>{S.playing?pause():play();});
+  $('reset').addEventListener('click',()=>{S.playing=false;S.acc=0;initRecords();recompute();});
+  $('stepFwd').addEventListener('click',()=>{S.playing=false;if(S.records.length-1<totalDays())stepDay();recompute();});
+  $('stepBack').addEventListener('click',()=>{S.playing=false;if(S.records.length>1)S.records.pop();recompute();});
+  if('ResizeObserver' in window) new ResizeObserver(resizeCanvas).observe(cvWrap);
+  else window.addEventListener('resize',resizeCanvas);
+  $('ph').value=S.ph;$('fe').value=S.fe;$('speed').value=S.speed;
+  S.d=derive();
+  resizeCanvas();
+  refreshUI();
+}
+init();
+</script>
+</body>
+</html>
+  
