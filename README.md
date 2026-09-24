@@ -14,11 +14,11 @@ A single-page, static web app that simulates how soil pH and iron (Fe) affect on
 - Draws the plant on a canvas: bulb, roots, pseudostem, and individual leaves that grow in both count and size, colored by chlorophyll level
 - Shows a live report: chlorophyll trend, Fe-deficient days, height, bulb diameter, leaf count, and a harvest interpretation
 
-| Variety | Transplanting (DAT) | Direct Seeding (DAS) |
-|---|---|---|
-| Yellow Granex | 90 | 125 |
-| Red Pinoy | 95 | 130 |
-| Red Creole | 115 | 150 |
+| Variety       | Transplanting (DAT) | Direct Seeding (DAS) |
+| ------------- | ------------------- | -------------------- |
+| Yellow Granex | 90                  | 125                  |
+| Red Pinoy     | 95                  | 130                  |
+| Red Creole    | 115                 | 150                  |
 
 ## Deploying on GitHub Pages
 
@@ -48,8 +48,8 @@ pHfactor(pH) = 1.2 / (1 + e^(1.25 × (pH − 6.9)))
 
 This yields roughly:
 
-| pH | 4 | 5 | 6 | 7 | 7.9 | 9 |
-|---|---|---|---|---|---|---|
+| pH        | 4    | 5    | 6    | 7    | 7.9  | 9    |
+| --------- | ---- | ---- | ---- | ---- | ---- | ---- |
 | pH factor | 1.17 | 1.10 | 0.91 | 0.56 | 0.27 | 0.08 |
 
 reflecting the acidic → more Fe available, alkaline → less Fe available relationship from the source studies.
@@ -117,7 +117,7 @@ Because growth is accumulated day by day rather than computed from final inputs,
 
 ## Model calibration note
 
-Specific thresholds (e.g. "deficient" below ~60 ppm effective Fe) are a teaching model tuned to match the *direction and size* of the published results below — they are not measured field cutoffs. The app is meant to build intuition about pH–Fe–chlorophyll relationships, not to replace soil testing or agronomic advice.
+Specific thresholds (e.g. "deficient" below ~60 ppm effective Fe) are a teaching model tuned to match the _direction and size_ of the published results below — they are not measured field cutoffs. The app is meant to build intuition about pH–Fe–chlorophyll relationships, not to replace soil testing or agronomic advice.
 
 ## Scientific references
 
@@ -128,7 +128,3 @@ Specific thresholds (e.g. "deficient" below ~60 ppm effective Fe) are a teaching
 - [Growth, health, quality and production of onions inoculated with systemic biological products (Guanajuato, Mexico)](https://www.researchgate.net/publication/390360750_Growth_Health_Quality_and_Production_of_Onions_Allium_cepa_L_Inoculated_with_Systemic_Biological_Products)
 - Bongabon and Nueva Ecija onion production data: Red Pinoy, ~90–95 days after transplanting
 - Direct seeding vs. transplanting duration comparisons: Ethiopia (~135 vs. 104 days), Brazil (~132 vs. 102 days)
-
-## License
-
-Add your preferred license here (e.g. MIT).
