@@ -105,7 +105,3 @@ Specific thresholds (e.g. "deficient" below ~60 ppm effective Fe) are a teaching
 - [Growth, health, quality and production of onions inoculated with systemic biological products (Guanajuato, Mexico)](https://www.researchgate.net/publication/390360750_Growth_Health_Quality_and_Production_of_Onions_Allium_cepa_L_Inoculated_with_Systemic_Biological_Products)
 - Bongabon and Nueva Ecija onion production data: Red Pinoy, ~90–95 days after transplanting
 - Direct seeding vs. transplanting duration comparisons: Ethiopia (~135 vs. 104 days), Brazil (~132 vs. 102 days)
-
-## License
-
-Add your preferred license here (e.g. MIT).
