@@ -30,17 +30,21 @@ No dependencies, no `npm install`, no build tools — it's one self-contained HT
 
 ## The mathematical model
 
-The simulation runs one simulated day at a time. Each day updates effective iron supply → chlorophyll → accumulated growth, in that order.
+The simulation runs one simulated day at a time. Each day updates **effective iron supply → chlorophyll → accumulated growth**, in that order.
 
 ### 1. Effective iron supply
 
 Soil pH and Fe concentration are combined — the model never infers deficiency from pH alone:
 
-$$E = Fe \times pHfactor(pH)$$
+```
+E = Fe × pHfactor(pH)
+```
 
 The pH factor is a logistic (S-curve) that falls as soil becomes more alkaline:
 
-$$pHfactor(pH) = \frac{1.2}{1 + e^{\,1.25(pH - 6.9)}}$$
+```
+pHfactor(pH) = 1.2 / (1 + e^(1.25 × (pH − 6.9)))
+```
 
 This yields roughly:
 
@@ -54,39 +58,58 @@ reflecting the acidic → more Fe available, alkaline → less Fe available rela
 
 A Hill-type saturation curve models diminishing returns from added Fe:
 
-$$sat(E) = 1 - e^{-(E/60)^{1.6}}$$
+```
+sat(E) = 1 − e^(−(E/60)^1.6)
+```
 
 Two stress penalties are applied on top:
 
-**High-Fe toxicity:**
+**High-Fe toxicity** — reduces the target once effective Fe passes ~200 ppm:
 
-$$tox(E) = 1 - 0.25 \cdot \text{clamp}\!\left(\frac{E - 200}{300},\ 0,\ 1\right)$$
+```
+tox(E) = 1 − 0.25 × clamp((E − 200) / 300, 0, 1)
+```
 
 **Extreme-acidity penalty** (independent of Fe — very low pH is never assumed to be better):
 
-$$acid(pH) = \text{clamp}\!\left(\frac{5.5 - pH}{2.0},\ 0,\ 1\right)$$
+```
+acid(pH) = clamp((5.5 − pH) / 2.0, 0, 1)
+```
 
 Combined into a target chlorophyll index, on a 0–1 scale:
 
-$$target = \text{clamp}\Big(\big(0.25 + 0.75\cdot sat(E)\big)\cdot tox(E)\cdot(1 - 0.15\cdot acid),\ 0.05,\ 1\Big)$$
+```
+target = clamp( (0.25 + 0.75 × sat(E)) × tox(E) × (1 − 0.15 × acid), 0.05, 1 )
+```
 
 ### 3. Chlorophyll dynamics (first-order lag)
 
 Chlorophyll moves toward its target gradually rather than jumping instantly — a discrete exponential smoothing filter, so a pH/Fe fix takes several simulated days to show:
 
-$$CI_d = CI_{d-1} + 0.12\,(target_d - CI_{d-1})$$
+```
+CI(day d) = CI(day d−1) + 0.12 × ( target(d) − CI(day d−1) )
+```
 
 ### 4. Growth accumulation (logistic progress curves)
 
 Two normalized logistic curves track how far along the plant is — one for top growth (height/leaves, centered ~36–42% of field duration), one for bulb growth (centered ~70%):
 
-$$g(x) = \frac{\sigma(k(x - x_0)) - \sigma(-k x_0)}{\sigma(k(1 - x_0)) - \sigma(-k x_0)}, \qquad \sigma(z) = \frac{1}{1 + e^{-z}}$$
+```
+sigmoid(z) = 1 / (1 + e^−z)
+
+g(x) = [ sigmoid(k×(x − x0)) − sigmoid(−k×x0) ]
+       ─────────────────────────────────────────
+       [ sigmoid(k×(1 − x0)) − sigmoid(−k×x0) ]
+```
 
 Each day's increment is the derivative of this progress curve times that day's chlorophyll-scaled growth factor, accumulated day by day:
 
-$$\text{Height}_n = h_0 + (h_{max} - h_0)\sum_{d=1}^{n} \big(g_{top}(d) - g_{top}(d-1)\big)\cdot CI_d^{0.3}\cdot pm_d$$
+```
+Height(day n) = h0 + (hMax − h0) × Σ [ g_top(d) − g_top(d−1) ] × CI(d)^0.3 × pm(d)
+                                    d=1..n
+```
 
-where $pm_d = 1 - 0.5\cdot acid_d - 0.15\cdot alk_d$ is a pH-stress multiplier. Bulb diameter and leaf count follow the same pattern with their own exponents and progress curve.
+where `pm(d) = 1 − 0.5 × acid(d) − 0.15 × alk(d)` is a pH-stress multiplier. Bulb diameter and leaf count follow the same pattern with their own exponents and progress curve.
 
 Because growth is accumulated day by day rather than computed from final inputs, pausing mid-simulation and changing pH or Fe only affects the days that follow — earlier growth is already locked in.
 
@@ -105,7 +128,3 @@ Specific thresholds (e.g. "deficient" below ~60 ppm effective Fe) are a teaching
 - [Growth, health, quality and production of onions inoculated with systemic biological products (Guanajuato, Mexico)](https://www.researchgate.net/publication/390360750_Growth_Health_Quality_and_Production_of_Onions_Allium_cepa_L_Inoculated_with_Systemic_Biological_Products)
 - Bongabon and Nueva Ecija onion production data: Red Pinoy, ~90–95 days after transplanting
 - Direct seeding vs. transplanting duration comparisons: Ethiopia (~135 vs. 104 days), Brazil (~132 vs. 102 days)
-
-## License
-
-Add your preferred license here (e.g. MIT).
