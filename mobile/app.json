@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Onion Growth Simulator",
+    "slug": "onion-growth-simulator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ph.bongabon.onionsimulator"
+    },
+    "android": {
+      "package": "ph.bongabon.onionsimulator",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#f4f1e4",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ebce4918-930f-4bcf-841c-f62b270935c0"
+      }
+    }
+  }
+}

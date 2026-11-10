@@ -28,6 +28,19 @@ A single-page, static web app that simulates how soil pH and iron (Fe) affect on
 
 No dependencies, no `npm install`, no build tools — it's one self-contained HTML file.
 
+## Mobile app (offline APK)
+
+The `mobile/` folder is a React Native (Expo) shell that bundles this same `index.html` and runs it in a WebView, so the simulator works offline on Android. `index.html` remains the single source of truth.
+
+```bash
+cd mobile
+npm install
+npm run apk
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+See [mobile/README.md](mobile/README.md) for requirements, release builds and how to sync `index.html` into the app after edits.
+
 ## The mathematical model
 
 The simulation runs one simulated day at a time. Each day updates effective iron supply → chlorophyll → accumulated growth, in that order.

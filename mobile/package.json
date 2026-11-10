@@ -1,0 +1,25 @@
+{
+  "name": "onion-growth-simulator",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "expo": "~58.0.23",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-webview": "14.0.1"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "sync:html": "node scripts/sync-html.js",
+    "postinstall": "node scripts/sync-html.js",
+    "prebuild:android": "npm run sync:html && expo prebuild --platform android --clean",
+    "apk": "npm run prebuild:android && cd android && ./gradlew assembleDebug",
+    "apk:release": "npm run prebuild:android && cd android && ./gradlew assembleRelease"
+  },
+  "private": true
+}
